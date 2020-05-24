@@ -1,7 +1,6 @@
 import { ActionTypes, State, Player } from "./DataContext";
-import { deleteProperty, toObject, toArray } from "../helper";
+import { toObject, toArray } from "../helper";
 
-const timer = null;
 
 const reducer = (state: State, action: any) => {
   const { payload, type } = action;
@@ -30,10 +29,11 @@ const reducer = (state: State, action: any) => {
         .map((a, i) => ({ ...a, order: i }));
 
       const newPlayers = toObject(newPlayersArr) as Record<string, Player>;
-
+      const deleteCurrPlayer = state.currPlayer?.name === payload;
       return {
         ...state,
         players: newPlayers,
+        currPlayer: deleteCurrPlayer ? null : state.currPlayer,
       };
     case ActionTypes.AddPoints:
       const { points, player } = payload;
@@ -73,6 +73,36 @@ const reducer = (state: State, action: any) => {
       return {
         ...state,
         currPlayer: state.players[payload]
+      }
+    case ActionTypes.SetQuestion:
+      const questionIds = state.questions.map(q => q.name);
+
+      if (payload === "next") {
+        // get next question
+        const nextQuestionId = state.currQuestion ? state.currQuestion + 1 : 0;
+        return {
+          ...state,
+          currQuestion: nextQuestionId,
+          showCurrAnswer: false,
+        }
+      } else if (!payload) {
+        return {
+          ...state,
+          currQuestion: null,
+        }
+      }
+
+      const currentIdx = questionIds.indexOf(payload);
+
+      return {
+        ...state,
+        currQuestion: currentIdx ? currentIdx : 0,
+        showCurrAnswer: false,
+      }
+    case ActionTypes.SetShowCurrAnswer:
+      return {
+        ...state,
+        showCurrAnswer: payload,
       }
     default:
       return state;

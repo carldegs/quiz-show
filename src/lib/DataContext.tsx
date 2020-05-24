@@ -1,6 +1,9 @@
 import React, { useReducer, useEffect } from "react";
+import { v4 as uuidv4 } from "uuid";
 import reducer from "./reducer";
 import { parseState } from "../helper";
+import questions from "./Questions";
+import shuffle from "lodash/shuffle";
 
 const DataContext = React.createContext({});
 const localStorageKey = "quiz-show";
@@ -58,16 +61,23 @@ export class Round {
 export interface State {
   players: Record<string, Player>;
   currPlayer: Player | null;
-  currQuestion: Question | null;
+  currQuestion: number | null;
+  showCurrAnswer: false;
   currRound: number;
   rounds: Round[];
   currTime: number;
+  questions: Question[];
 }
+
+const questionsArr = shuffle(questions).map(
+  (question) => new Question(uuidv4(), question.text, question.answer)
+);
 
 const initialState: State = {
   players: {},
   currPlayer: null,
-  currQuestion: null,
+  currQuestion: 0,
+  showCurrAnswer: false,
   currRound: 0,
   rounds: [
     new Round(PointsType.Fixed, 10, 50),
@@ -75,25 +85,33 @@ const initialState: State = {
     new Round(PointsType.Bid, 30),
   ],
   currTime: 0,
+  questions: questionsArr,
 };
 
 const fetchState = () => {
   const dataStr = localStorage.getItem(localStorageKey);
 
-  console.log(dataStr);
   if (dataStr) {
     try {
       const savedState = JSON.parse(dataStr);
-      const { players, currPlayer, currQuestion, rounds } = savedState;
+      const {
+        players,
+        currPlayer,
+        currQuestion,
+        rounds,
+        questions,
+      } = savedState;
+
       return {
         ...savedState,
-        players: parseState(players, Player),
-        currPlayer: Player.parse(currPlayer),
-        currQuestion: currQuestion ? Question.parse(currQuestion) : null,
+        players: players ? parseState(players, Player) : {},
+        currPlayer: currPlayer ? Player.parse(currPlayer) : null,
+        currQuestion: currQuestion?.name ? Question.parse(currQuestion) : null,
         rounds: rounds.map((round: any) => Round.parse(round)),
+        questions: questions.map((question: any) => Question.parse(question)),
       };
-    } catch(e) {
-      console.error('err', e)
+    } catch (e) {
+      console.error("err", e);
       return initialState;
     }
   }
@@ -108,7 +126,7 @@ export enum ActionTypes {
   ResetBid,
   AddBidToPoints,
   SubtractBidToPoints,
-  NextQuestion,
+  SetQuestion,
   StartTime,
   UpdateTime,
   ResetTime,
@@ -117,6 +135,7 @@ export enum ActionTypes {
   SetWrongAnswer,
   DecrementTimer,
   SetCurrentPlayer,
+  SetShowCurrAnswer,
 }
 
 export interface ActionCreatorsType {
@@ -128,7 +147,7 @@ export interface ActionCreatorsType {
   resetBid(player?: string): null;
   addBidToPoints(player?: string): null;
   subtractBidToPoints(player?: string): null;
-  nextQuestion(): null;
+  setQuestion(id: string | "next" | null): null;
   startTimer(): null;
   resetTimer(time: number): null;
   getTime(): number;
@@ -137,7 +156,8 @@ export interface ActionCreatorsType {
   setCorrectAnswer(): null;
   setWrongAnswer(): null;
   decrementTimer(): null;
-  setCurrentPlayer(playerName: string): null;
+  setCurrentPlayer(playerName: string | null): null;
+  setShowCurrAnswer(show: boolean): null;
 }
 
 export interface DataContextType extends ActionCreatorsType {
@@ -162,37 +182,18 @@ const setActionCreators = (data: State, dispatch: any) => {
       callDispatch(ActionTypes.AddBidToPoints, player),
     subtractBidToPoints: (player) =>
       callDispatch(ActionTypes.SubtractBidToPoints, player),
-    nextQuestion: () => callDispatch(ActionTypes.NextQuestion),
+    setQuestion: (id) => callDispatch(ActionTypes.SetQuestion, id),
     resetTimer: (time) => callDispatch(ActionTypes.ResetTime, time),
     decrementTimer: () => callDispatch(ActionTypes.DecrementTimer),
     setCurrentPlayer: (playerName) =>
       callDispatch(ActionTypes.SetCurrentPlayer, playerName),
+    setShowCurrAnswer: (show) =>
+      callDispatch(ActionTypes.SetShowCurrAnswer, show),
   } as ActionCreatorsType;
 };
 
 function DataProvider(props: any) {
   const [data, dispatch] = useReducer(reducer, fetchState());
-
-  useEffect(() => {
-    const fetchData = async () => {
-      // const modules = await fetchModules();
-
-      // console.log('modules', modules);
-
-      // dispatch({
-      //   type: ActionTypes.FetchModules,
-      //   payload: {
-      //     modules,
-      //     updateDate: new Date(),
-      //   }
-      // });
-    }
-
-    // if (!toArray(data.modules).length) {
-    //   fetchData();
-    // }
-
-  }, []);
 
   const actionCreators: ActionCreatorsType = setActionCreators(data, dispatch);
   localStorage.setItem(localStorageKey, JSON.stringify(data));
