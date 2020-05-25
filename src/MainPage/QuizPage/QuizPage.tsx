@@ -31,6 +31,13 @@ const QuizPage = () => {
     setPosition(() => [a, b]);
   }, [currTime]);
 
+  const getTextColor = () => {
+    return ([
+      '#fa2583',
+      '#a231ef',
+    ])[getRandInt(0,2)]
+  }
+
   const hasAQuestion =
     questions && currQuestion !== null && questions[currQuestion as number];
 
@@ -47,17 +54,17 @@ const QuizPage = () => {
         >
           <path
             className={`blob-${blobNum}`}
-            fill="#438dce"
+            fill="#000a77"
             transform={`translate(100 100) rotate(${getRandInt(-15, 16)} ${getRandInt(-15, 16)} 0)`}
             style={{ transformBox: "fill-box", transformOrigin: "center"}}
           ></path>
           <text
-            fill="#fcf753"
+            fill={getTextColor()}
             textAnchor="middle"
             transform={`translate(${
               110 + position[0] / (currTime < 10 ? 2 : 1)
             } ${120 + position[1] / (currTime < 10 ? 2 : 1)}) ${
-              currTime < 10 ? "scale(2)" : ""
+              currTime < 10 ? "scale(2)" : `scale(${getRandInt(90, 150)/100})`
             }`}
             fontSize="60px"
           >
